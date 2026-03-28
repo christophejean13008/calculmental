@@ -1051,7 +1051,7 @@ function renderDashboard(){
     const isDone=!!sessionDone[id];
     if(isDone)btn.classList.add('cat-btn-done');
     btn.innerHTML=`<span class="cat-emoji">${cat.emoji}</span><span class="cat-name">${cat.name}</span><span class="cat-sub">${isDone?'Session terminée':('⭐'+dist[4]+'/'+cards.length+' · '+nextCards.length+' carte'+(nextCards.length>1?'s':'')+' à voir')}</span>`;
-    btn.onclick=isDone?()=>snack('⏳ Cette série a déjà été faite aujourd'hui !',2000):()=>startSession(id);
+    btn.onclick=isDone?()=>snack("⏳ Cette série a déjà été faite aujourd'hui !",2000):()=>startSession(id);
     grid.appendChild(btn);
   });
 }
