@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Boîtes de Leitner ⭐</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#FEF6E4;--text:#1A1A2E;--text-light:#7C7C9A;
+      --border:#E8E0D0;--shadow:0 6px 28px rgba(0,0,0,0.11);--radius:22px;
+      --doubles:#E8400C;--quasi:#008F7A;--comp:#7209B7;--mult:#1145A0;
+      --correct:#2E7D32;--wrong:#C62828;--teacher:#37474F;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;display:flex;flex-direction:column;align-items:center}
+    h1,h2,h3{font-family:'Fredoka One',cursive;letter-spacing:.5px}
+    button{touch-action:manipulation;cursor:pointer;font-family:inherit;border:none}
+
+    /* SCREENS */
+    .screen{display:none;width:100%;max-width:820px;min-height:100dvh;padding:24px 18px 36px;flex-direction:column;align-items:center;gap:18px;animation:fadeUp .28s ease}
+    .screen.active{display:flex}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+
+    /* BOUTONS */
+    .btn{font-family:'Fredoka One',cursive;font-size:22px;padding:16px 32px;border-radius:50px;transition:transform .13s,box-shadow .13s;box-shadow:var(--shadow);letter-spacing:.4px}
+    .btn:active{transform:scale(.94);box-shadow:0 2px 8px rgba(0,0,0,.12)}
+    .btn-ghost{font-family:'Nunito',sans-serif;font-size:16px;font-weight:800;padding:10px 20px;border-radius:50px;background:white;border:2px solid var(--border);color:var(--text-light);transition:border-color .15s,color .15s}
+    .btn-ghost:hover{border-color:var(--text);color:var(--text)}
+
+    /* SYNC BADGE */
+    .sync-badge{position:fixed;top:12px;right:14px;font-size:12px;font-weight:800;padding:5px 12px;border-radius:50px;z-index:500;transition:all .3s;pointer-events:none}
+    .sync-ok     {background:#E8F5E9;color:#1B5E20;border:1.5px solid #C8E6C9}
+    .sync-saving {background:#FFF3E0;color:#E65100;border:1.5px solid #FFE0B2}
+    .sync-off    {background:#FFEBEE;color:#B71C1C;border:1.5px solid #FFCDD2}
+    .sync-cfg    {background:#F3E5F5;color:#6A1B9A;border:1.5px solid #E1BEE7}
+
+    /* SETUP SCREEN */
+
+    /* ACCUEIL */
+    #screen-accueil{justify-content:flex-start;text-align:center;gap:0;padding-top:32px}
+    .logo-star{font-size:72px;line-height:1;display:block;animation:pulse 2.4s ease-in-out infinite;margin-bottom:10px}
+    @keyframes pulse{0%,100%{transform:scale(1) rotate(-3deg)}50%{transform:scale(1.08) rotate(3deg)}}
+    #screen-accueil h1{font-size:40px;color:var(--text);line-height:1.1;margin-bottom:28px}
+    .step-bar{display:flex;gap:8px;align-items:center;margin-bottom:24px}
+    .step-dot{width:10px;height:10px;border-radius:50%;background:#E0D8CC;transition:background .2s}
+    .step-dot.active{background:#FF7043}.step-dot.done{background:#66BB6A}
+    .step-label{font-size:14px;font-weight:800;color:var(--text-light)}
+    .acc-section{width:100%;text-align:left}
+    .acc-section-title{font-family:'Fredoka One',cursive;font-size:21px;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+    .class-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;width:100%;margin-bottom:14px}
+    .class-card{background:white;border-radius:18px;padding:18px 14px;text-align:center;box-shadow:0 3px 14px rgba(0,0,0,.09);border:2.5px solid transparent;cursor:pointer;transition:all .17s;display:flex;flex-direction:column;gap:6px;touch-action:manipulation}
+    .class-card:hover{border-color:#FF7043;transform:translateY(-2px)}.class-card:active{transform:scale(.94)}
+    .class-card .cc-school{font-size:12px;font-weight:800;color:var(--text-light);text-transform:uppercase;letter-spacing:.5px}
+    .class-card .cc-name  {font-family:'Fredoka One',cursive;font-size:22px;color:var(--text)}
+    .class-card .cc-count {font-size:13px;font-weight:800;color:var(--text-light)}
+    .class-card-new{border:2.5px dashed #C8BEB0;background:transparent;color:var(--text-light);font-family:'Fredoka One',cursive;font-size:18px;padding:18px 14px;justify-content:center;align-items:center;gap:6px}
+    /* Mini chart sur les cartes de classe */
+    .cc-chart-wrap{width:100%;margin-top:6px}
+    .cc-chart-bars{display:flex;gap:3px;height:28px;align-items:flex-end}
+    .cc-bar{flex:1;border-radius:4px 4px 0 0;transition:height .4s ease;min-height:3px}
+    .cc-bar-labels{display:flex;gap:3px;margin-top:2px}
+    .cc-bar-lbl{flex:1;font-size:9px;font-weight:800;color:var(--text-light);text-align:center}
+    .cc-score{font-family:'Fredoka One',cursive;font-size:13px;margin-top:5px;text-align:center}
+    .cc-score-bar{height:6px;background:#EDE8DF;border-radius:3px;overflow:hidden;margin-top:4px}
+    .cc-score-fill{height:100%;border-radius:3px;transition:width .6s ease}
+    .cc-no-data{font-size:12px;font-weight:700;color:var(--text-light);font-style:italic;margin-top:6px;text-align:center}
+    /* Classement écoles */
+    .school-ranking{width:100%;background:white;border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);margin-bottom:4px}
+    .school-ranking-title{font-family:'Fredoka One',cursive;font-size:18px;color:var(--text);margin-bottom:12px}
+    .school-rank-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+    .school-rank-pos{font-family:'Fredoka One',cursive;font-size:20px;width:28px;text-align:center}
+    .school-rank-name{font-size:14px;font-weight:800;color:var(--text);flex:1}
+    .school-rank-bar-wrap{width:120px;height:10px;background:#F0ECE4;border-radius:5px;overflow:hidden}
+    .school-rank-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#FF7043,#D84315)}
+    .school-rank-score{font-family:'Fredoka One',cursive;font-size:16px;color:var(--text-light);min-width:38px;text-align:right}
+    .class-card-new:hover{border-color:#FF7043;color:#FF7043;background:white}
+    .class-loading{display:flex;align-items:center;justify-content:center;gap:10px;color:var(--text-light);font-weight:800;font-size:16px;padding:28px}
+    .spinner{width:24px;height:24px;border:3px solid #E0D8CC;border-top-color:#FF7043;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .class-selected-header{width:100%;background:white;border-radius:18px;padding:16px 20px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+    .csh-left{display:flex;flex-direction:column;gap:2px}
+    .csh-school{font-size:12px;font-weight:800;color:var(--text-light);text-transform:uppercase;letter-spacing:.5px}
+    .csh-name  {font-family:'Fredoka One',cursive;font-size:24px;color:var(--text)}
+    .btn-change-class{font-size:14px;font-weight:800;color:var(--text-light);background:none;border:2px solid var(--border);border-radius:50px;padding:8px 14px}
+    .students-chips{display:flex;flex-wrap:wrap;gap:9px;width:100%;margin-bottom:6px}
+    .chip{font-family:'Fredoka One',cursive;font-size:26px;padding:16px 28px;background:white;border:3px solid var(--border);border-radius:50px;cursor:pointer;transition:all .15s;color:var(--text);touch-action:manipulation;box-shadow:0 3px 12px rgba(0,0,0,.08)}
+    .chip:hover{border-color:#FF7043;color:#FF7043}
+    .chip-empty{font-size:15px;font-weight:700;color:var(--text-light);font-style:italic}
+    .input-name{font-family:'Nunito',sans-serif;font-size:18px;font-weight:800;text-align:center;width:100%;padding:12px 18px;border:2px solid var(--border);border-radius:var(--radius);outline:none;background:white;color:var(--text);transition:border-color .2s;-webkit-appearance:none;opacity:.85}
+    .input-name:focus{border-color:#FF6B35}
+    .btn-login{background:linear-gradient(135deg,#FF7043,#D84315);color:white;font-size:18px;padding:13px 36px;width:100%;max-width:280px}
+    .btn-teacher-entry{font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;padding:9px 20px;background:transparent;border:2px solid #CFD8DC;border-radius:50px;color:#90A4AE;transition:all .2s}
+    .btn-teacher-entry:hover{border-color:var(--teacher);color:var(--teacher)}
+
+    /* DASHBOARD */
+    #screen-dashboard{padding-top:28px}
+    .dash-header{width:100%;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+    .dash-header h1{font-size:28px;color:var(--text)}
+    .session-badge{font-family:'Fredoka One',cursive;font-size:14px;background:#F0ECE4;color:var(--text-light);padding:6px 14px;border-radius:50px;white-space:nowrap}
+    .session-badge span{color:var(--text);font-size:18px}
+    .dash-header-btns{display:flex;gap:8px}
+    .panel{width:100%;background:white;border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+    .panel-title{font-size:20px;color:var(--text);margin-bottom:14px}
+    .boxes-row{display:flex;gap:10px}
+    .box-tile{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+    .box-tile:active .box-visual{transform:scale(.93)}
+    .box-visual{transition:transform .13s}
+    /* Overlay boîte */
+    .box-overlay-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;max-height:55vh;overflow-y:auto;margin-top:14px}
+    .box-overlay-card{background:#F7F4EF;border-radius:12px;padding:10px 8px;text-align:center}
+    .box-overlay-q{font-size:13px;font-weight:800;color:var(--text)}
+    .box-overlay-a{font-family:'Fredoka One',cursive;font-size:22px}
+    .box-overlay-cat{font-size:11px;font-weight:800;color:var(--text-light);margin-bottom:3px}
+    .box-overlay-empty{font-size:15px;font-weight:700;color:var(--text-light);text-align:center;padding:24px}
+    .modal-wide{max-width:560px}
+    .session-info{font-size:13px;font-weight:700;color:var(--text-light);background:#F5F1EA;border-radius:10px;padding:10px 14px;margin-bottom:4px;line-height:1.6}
+    .box-visual{width:100%;aspect-ratio:1;border-radius:12px;border:3px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px}
+    .box-num-label{font-family:'Fredoka One',cursive;font-size:24px}
+    .box-count-label{font-size:11px;font-weight:800;color:var(--text-light)}
+    .box-desc{font-size:11px;font-weight:800;color:var(--text-light);text-align:center;line-height:1.2}
+    .section-title{width:100%;font-size:20px;color:var(--text)}
+    .cat-grid{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .cat-btn{border-radius:var(--radius);padding:22px 14px;color:white;display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:var(--shadow);transition:transform .13s;cursor:pointer;border:none;touch-action:manipulation}
+    .cat-btn:active{transform:scale(.94)}
+    .cat-btn-locked{opacity:.45;filter:grayscale(.65);cursor:not-allowed;position:relative}
+    .cat-btn-locked::after{content:'🔒';position:absolute;top:10px;right:12px;font-size:18px;}
+    .cat-btn-done{opacity:.6;filter:grayscale(.4);cursor:not-allowed;position:relative}
+    .cat-btn-done::after{content:'✓';position:absolute;top:8px;right:12px;font-size:18px;font-weight:900;color:rgba(255,255,255,.9);}
+    .cat-btn-complete{position:relative}
+    .cat-btn-complete::after{content:'⭐';position:absolute;top:8px;right:10px;font-size:16px;}
+    .cat-emoji{font-size:38px}.cat-name{font-family:'Fredoka One',cursive;font-size:17px;line-height:1.2;text-align:center}
+    .cat-sub{font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;opacity:.85;text-align:center}
+    .cat-doubles{background:linear-gradient(135deg,#FF7043,#BF360C)}
+    .cat-quasi  {background:linear-gradient(135deg,#26A69A,#00695C)}
+    .cat-comp   {background:linear-gradient(135deg,#AB47BC,#6A1B9A)}
+    .cat-mult   {background:linear-gradient(135deg,#42A5F5,#0D47A1)}
+    .btn-fiche{font-family:'Fredoka One',cursive;font-size:20px;padding:18px 32px;background:white;border:3px solid var(--border);border-radius:50px;width:100%;max-width:400px;box-shadow:var(--shadow);color:var(--text);transition:border-color .15s,color .15s;touch-action:manipulation}
+    .btn-fiche:hover{border-color:var(--mult);color:var(--mult)}
+
+    /* JEU */
+    #screen-game{justify-content:space-between;padding:16px 18px 24px}
+    .game-header{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .game-badge{font-family:'Fredoka One',cursive;font-size:17px;padding:8px 18px;border-radius:50px;color:white}
+    .game-box-pill{font-size:14px;font-weight:800;color:white;padding:6px 14px;border-radius:50px}
+    .game-progress{font-size:15px;font-weight:800;color:var(--text-light)}
+    .progress-wrap{width:100%;height:8px;background:#E0D8CC;border-radius:4px;overflow:hidden}
+    .progress-fill{height:100%;border-radius:4px;transition:width .35s ease}
+    .question-area{flex:1;width:100%;display:flex;align-items:center;justify-content:center;padding:10px 0}
+    .card-face{background:white;border-radius:30px;box-shadow:0 10px 50px rgba(0,0,0,.14);width:100%;padding:48px 32px;display:flex;flex-direction:column;align-items:center;gap:0;border-top:7px solid transparent;transition:background .3s}
+    .question-txt{font-family:'Fredoka One',cursive;font-size:76px;color:var(--text);text-align:center;line-height:1.1;transform:rotate(180deg)}
+    .divider-dashed{width:100%;height:2px;background:repeating-linear-gradient(90deg,#E0E0E0 0,#E0E0E0 8px,transparent 8px,transparent 16px);margin:24px 0 20px}
+    .answer-wrap{display:none;flex-direction:column;align-items:center;gap:6px;width:100%}
+    .answer-wrap.show{display:flex}
+    .answer-lbl{font-size:13px;font-weight:800;color:var(--text-light);letter-spacing:2px;text-transform:uppercase}
+    .answer-txt{font-family:'Fredoka One',cursive;font-size:96px;line-height:1}
+    .game-actions{width:100%;display:flex;flex-direction:column;gap:12px}
+    .btn-reveal{font-family:'Nunito',sans-serif;font-size:18px;font-weight:800;padding:17px;background:white;border:2.5px dashed #C0B8A8;border-radius:var(--radius);color:var(--text-light);width:100%;transition:border-color .15s,color .15s}
+    .judge-row{display:none;grid-template-columns:1fr 1fr;gap:12px}
+    .judge-row.show{display:grid}
+    .btn-wrong-ans,.btn-correct-ans{font-family:'Fredoka One',cursive;font-size:28px;padding:24px 16px;border-radius:var(--radius);border:none;box-shadow:var(--shadow);transition:transform .13s;color:white}
+    .btn-wrong-ans:active,.btn-correct-ans:active{transform:scale(.93)}
+    .btn-wrong-ans  {background:linear-gradient(135deg,#EF5350,#B71C1C)}
+    .btn-correct-ans{background:linear-gradient(135deg,#66BB6A,#1B5E20)}
+    .btn-quit-game{font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;padding:12px;background:transparent;border:2px solid var(--border);border-radius:50px;color:var(--text-light);width:100%}
+    @keyframes flashG{0%,100%{background:white}50%{background:#E8F5E9}}
+    @keyframes flashR{0%,100%{background:white}50%{background:#FFEBEE}}
+    .flash-ok{animation:flashG .4s ease}.flash-err{animation:flashR .4s ease}
+
+    /* FIN */
+    #screen-fin{justify-content:center;text-align:center;gap:22px}
+    .fin-emoji{font-size:86px;display:block}
+    #screen-fin h1{font-size:40px}
+    #screen-fin .fin-msg{font-size:19px;font-weight:700;color:var(--text-light)}
+    .stats-row{display:flex;gap:14px;justify-content:center;width:100%}
+    .stat-box{background:white;border-radius:var(--radius);padding:20px 28px;box-shadow:var(--shadow);flex:1;max-width:170px}
+    .stat-num{font-family:'Fredoka One',cursive;font-size:52px;line-height:1}
+    .stat-lbl{font-size:13px;font-weight:800;color:var(--text-light);margin-top:4px}
+    .moves-panel{width:100%;background:white;border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);text-align:left}
+    .moves-title{font-size:17px;margin-bottom:12px}
+    .tags-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+    .tag{font-size:13px;font-weight:800;padding:5px 13px;border-radius:20px}
+    .tag-ok {background:#E8F5E9;color:#1B5E20}
+    .tag-err{background:#FFEBEE;color:#B71C1C}
+    .fin-btns{display:flex;gap:12px;width:100%}
+    .btn-back-dash{background:linear-gradient(135deg,#42A5F5,#0D47A1);color:white;width:100%}
+
+    /* FICHE */
+    #screen-fiche{gap:20px}
+    .fiche-top{width:100%;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+    .fiche-top h1{font-size:28px}
+    .fiche-panel{width:100%;background:white;border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+    .fiche-panel h2{font-size:21px;margin-bottom:14px}
+    .fiche-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:8px}
+    .fiche-card{background:#F7F4EF;border-radius:12px;padding:10px 8px;text-align:center}
+    .fiche-q{font-size:15px;font-weight:800;color:var(--text)}
+    .fiche-a{font-family:'Fredoka One',cursive;font-size:24px}
+    .mult-table-block{margin-bottom:18px}
+    .mult-table-title{font-family:'Fredoka One',cursive;font-size:17px;margin-bottom:8px}
+    .mult-row{display:flex;flex-wrap:wrap;gap:6px}
+    .mult-item{background:#EFF4FF;border-radius:9px;padding:6px 10px;text-align:center;min-width:76px}
+    .mult-item .mq{font-size:12px;font-weight:800;color:var(--text-light)}
+    .mult-item .ma{font-family:'Fredoka One',cursive;font-size:20px;color:var(--mult)}
+
+    /* OVERLAYS */
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;align-items:center;justify-content:center;animation:fadeIn .2s ease}
+    .overlay.open{display:flex}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .modal{background:white;border-radius:28px;padding:36px 28px;max-width:380px;width:92%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:scaleIn .22s ease}
+    @keyframes scaleIn{from{transform:scale(.88)}to{transform:scale(1)}}
+    .modal h2{font-size:26px;margin-bottom:8px}.modal p{color:var(--text-light);font-size:15px;font-weight:700;margin-bottom:20px}
+    .modal-input{font-family:'Nunito',sans-serif;font-size:20px;font-weight:800;width:100%;padding:14px 18px;border:2.5px solid var(--border);border-radius:var(--radius);outline:none;margin-bottom:12px;-webkit-appearance:none}
+    .modal-input:focus{border-color:#FF6B35}
+    .modal-row{display:flex;gap:10px;margin-top:4px}
+    .modal-cancel{font-size:15px;font-weight:800;color:var(--text-light);background:none;border:none;padding:8px 20px;cursor:pointer}
+    .modal-confirm{font-family:'Fredoka One',cursive;font-size:20px;padding:14px 28px;border-radius:50px;background:linear-gradient(135deg,#FF7043,#D84315);color:white;border:none;flex:1;cursor:pointer;box-shadow:var(--shadow)}
+    .code-dots{display:flex;justify-content:center;gap:12px;margin-bottom:20px}
+    .code-dot{width:18px;height:18px;border-radius:50%;background:#E0E0E0;transition:background .15s}
+    .code-dot.filled{background:var(--teacher)}
+    .numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+    .numpad-btn{font-family:'Fredoka One',cursive;font-size:30px;padding:16px;background:#F5F5F5;border-radius:16px;border:none;transition:background .1s,transform .1s;color:var(--text)}
+    .numpad-btn:active{background:#E0E0E0;transform:scale(.93)}
+    .numpad-del{font-size:22px;background:#FFF3E0;color:#E65100}
+    .shake{animation:shake .35s ease}
+    @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-10px)}40%{transform:translateX(10px)}60%{transform:translateX(-7px)}80%{transform:translateX(7px)}}
+
+    /* MODULE ENSEIGNANT */
+    #screen-teacher{padding-top:24px;gap:0}
+    .teacher-header{width:100%;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+    .teacher-header h1{font-size:26px;color:var(--teacher)}
+    .teacher-badge{background:var(--teacher);color:white;font-size:13px;font-weight:800;padding:6px 16px;border-radius:50px}
+    .t-tabs{display:flex;width:100%;border-bottom:2px solid #E0D8CC;margin-bottom:20px}
+    .t-tab-main{flex:1;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;padding:14px 8px;background:none;border:none;border-bottom:3px solid transparent;color:var(--text-light);cursor:pointer;transition:all .15s}
+    .t-tab-main.active{color:var(--teacher);border-bottom-color:var(--teacher)}
+    .t-panel{display:none;width:100%;flex-direction:column;gap:16px}
+    .t-panel.active{display:flex}
+    .t-class-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;width:100%}
+    .t-class-card{background:white;border-radius:18px;padding:18px 16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
+    .t-class-card-header{display:flex;justify-content:space-between;align-items:flex-start}
+    .t-class-info .tc-school{font-size:12px;font-weight:800;color:var(--text-light);text-transform:uppercase}
+    .t-class-info .tc-name  {font-family:'Fredoka One',cursive;font-size:22px;color:var(--text)}
+    .t-class-info .tc-count {font-size:13px;font-weight:700;color:var(--text-light)}
+    .t-class-del{font-size:18px;background:#FFEBEE;border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+    .t-class-students{display:flex;flex-wrap:wrap;gap:6px}
+    .t-class-student-chip{font-size:13px;font-weight:800;padding:5px 12px;background:#F5F5F5;border-radius:50px;color:var(--text)}
+    .t-class-new{border:2.5px dashed #C8BEB0;background:transparent;border-radius:18px;padding:18px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:'Fredoka One',cursive;font-size:18px;color:var(--text-light);transition:all .15s}
+    .t-class-new:hover{border-color:#FF7043;color:#FF7043}
+    .t-section-title{font-family:'Fredoka One',cursive;font-size:18px;color:var(--teacher);border-bottom:2px solid #CFD8DC;padding-bottom:8px;width:100%}
+    .t-select{width:100%;font-family:'Nunito',sans-serif;font-size:18px;font-weight:800;padding:14px 18px;border:2.5px solid #CFD8DC;border-radius:var(--radius);background:white;color:var(--text);outline:none;-webkit-appearance:none}
+    .t-select:focus{border-color:var(--teacher)}
+    .t-student-card{width:100%;background:white;border-radius:var(--radius);padding:22px;box-shadow:var(--shadow)}
+    .t-student-name{font-family:'Fredoka One',cursive;font-size:24px;color:var(--text);margin-bottom:14px}
+    .t-cat-row{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+    .t-cat-item{display:flex;flex-direction:column;gap:4px}
+    .t-cat-label{display:flex;justify-content:space-between;font-size:14px;font-weight:800;color:var(--text-light)}
+    .t-bar-wrap{height:12px;background:#F0ECE4;border-radius:6px;overflow:hidden}
+    .t-bar-fill{height:100%;border-radius:6px;transition:width .5s ease}
+    .t-boxes-mini{display:flex;gap:7px;margin-bottom:18px}
+    .t-box-mini{flex:1;border-radius:10px;border:2.5px solid;padding:8px 4px;text-align:center;font-family:'Fredoka One',cursive}
+    .t-box-mini .tbm-num{font-size:20px}.t-box-mini .tbm-cnt{font-size:11px;font-weight:800;color:var(--text-light)}
+    .t-actions{display:flex;flex-direction:column;gap:10px}
+    .t-action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .t-btn{font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;padding:13px 10px;border-radius:14px;border:none;transition:transform .12s;text-align:center;cursor:pointer}
+    .t-btn:active{transform:scale(.93)}
+    .t-btn-danger{background:#FFEBEE;color:var(--wrong);border:2px solid #FFCDD2}
+    .t-btn-warn  {background:#FFF3E0;color:#E65100;   border:2px solid #FFE0B2}
+    .t-btn-ok    {background:#E8F5E9;color:#1B5E20;   border:2px solid #C8E6C9}
+    .t-cards-panel{width:100%;background:white;border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+    .t-cards-panel h3{font-size:17px;color:var(--text);margin-bottom:14px}
+    .t-cat-tabs{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+    .t-ctab{font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;padding:8px 14px;border-radius:50px;border:2px solid var(--border);background:white;color:var(--text-light);cursor:pointer;transition:all .15s}
+    .t-ctab.active{color:white;border-color:transparent}
+    .t-ctab-doubles.active{background:var(--doubles)}.t-ctab-quasi.active{background:var(--quasi)}
+    .t-ctab-comp.active{background:var(--comp)}.t-ctab-mult.active{background:var(--mult)}
+    .t-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:9px}
+    .t-card-item{background:#F7F4EF;border-radius:14px;padding:10px 8px;text-align:center;display:flex;flex-direction:column;gap:6px}
+    .t-card-q{font-size:14px;font-weight:800;color:var(--text)}
+    .t-card-box-sel{font-family:'Fredoka One',cursive;font-size:15px;padding:5px 8px;border-radius:9px;border:2px solid var(--border);background:white;color:var(--text);cursor:pointer;text-align:center;-webkit-appearance:none;outline:none;width:100%}
+    .sel-1{background:#FFEBEE;color:#B71C1C;border-color:#FFCDD2}
+    .sel-2{background:#FFF3E0;color:#E65100;border-color:#FFE0B2}
+    .sel-3{background:#FFFDE7;color:#F57F17;border-color:#FFF9C4}
+    .sel-4{background:#E8F5E9;color:#1B5E20;border-color:#C8E6C9}
+    .sel-5{background:#E3F2FD;color:#1565C0;border-color:#BBDEFB}
+
+    /* Snackbar */
+    .snackbar{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:#323232;color:white;font-size:15px;font-weight:700;padding:14px 26px;border-radius:50px;opacity:0;transition:opacity .25s,transform .25s;z-index:9999;white-space:nowrap}
+    .snackbar.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    /* PRINT */
+    @media print{
+      .no-print{display:none !important}
+      body{background:white}
+      .screen{display:flex !important;min-height:auto;padding:12px;animation:none}
+      #screen-accueil,#screen-dashboard,#screen-game,#screen-fin,#screen-teacher,
+      #screen-fiche{display:flex !important}
+      .fiche-panel{box-shadow:none;border:1px solid #E0E0E0;border-radius:10px;break-inside:avoid}
+      .fiche-grid{grid-template-columns:repeat(5,1fr)}
+    }
+    @media(max-width:480px){
+      .question-txt{font-size:60px}.answer-txt{font-size:78px}
+      .cat-grid{grid-template-columns:1fr 1fr}.t-action-row{grid-template-columns:1fr}
+      .class-grid{grid-template-columns:1fr 1fr}
+    }
+  </style>
+  <!-- Firebase compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<!-- SYNC BADGE -->
+<div class="sync-badge no-print" id="sync-badge" style="display:none;"></div>
+
+<!-- ========== ÉCRAN 0 : SETUP FIREBASE ========== -->
+<!-- ========== ÉCRAN 1 : ACCUEIL ========== -->
+<div id="screen-accueil" class="screen">
+  <span class="logo-star">⭐</span>
+  <h1>Boîtes de Leitner</h1>
+
+  <div class="step-bar" id="step-bar">
+    <div class="step-dot active" id="step-dot-0"></div>
+    <div class="step-dot" id="step-dot-1"></div>
+    <span class="step-label" id="step-label">Choix de la classe</span>
+  </div>
+
+  <div class="acc-section" id="acc-step1">
+    <div class="acc-section-title">🏫 Sélectionner une classe</div>
+    <div class="class-grid" id="class-grid">
+      <div class="class-loading"><div class="spinner"></div>Chargement…</div>
+    </div>
+  </div>
+
+  <div class="acc-section" id="acc-step2" style="display:none;flex-direction:column;gap:14px;">
+    <div class="class-selected-header">
+      <div class="csh-left">
+        <span class="csh-school" id="csh-school">—</span>
+        <span class="csh-name"   id="csh-name">—</span>
+      </div>
+      <button class="btn-change-class" onclick="accGoStep1()">← Changer</button>
+    </div>
+    <div class="acc-section-title" style="margin-top:4px;font-size:26px;">👤 Qui joue ?</div>
+    <div class="students-chips" id="students-chips"></div>
+    <div style="font-size:13px;font-weight:800;color:var(--text-light);margin-top:10px;letter-spacing:.3px;">✏️ Nouvel élève</div>
+    <input type="text" class="input-name" id="input-prenom" placeholder="Prénom de l'élève…" autocomplete="off" autocorrect="off" autocapitalize="words" maxlength="20">
+    <button class="btn btn-login" onclick="handleLogin()">Jouer ! 🚀</button>
+  </div>
+
+  <button class="btn-teacher-entry no-print" onclick="openTeacherLock()" style="margin-top:auto;">🔒 Espace enseignant</button>
+</div>
+
+<!-- ========== ÉCRAN 2 : DASHBOARD ========== -->
+<div id="screen-dashboard" class="screen">
+  <div class="dash-header">
+    <h1 id="dash-greeting">Bonjour !</h1>
+    <div class="session-badge" id="session-badge">Séance <span id="session-num">—</span></div>
+    <div class="dash-header-btns no-print">
+      <button class="btn-ghost" onclick="showFiche()">📄 Fiche</button>
+      <button class="btn-ghost" onclick="showScreen('accueil');renderAccueil()">← Élève</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h2 class="panel-title">📦 Mes 5 boîtes</h2>
+    <div class="boxes-row" id="boxes-row"></div>
+  </div>
+  <h2 class="section-title">🃏 Choisir une série</h2>
+  <div class="cat-grid" id="cat-grid"></div>
+  <button class="btn-fiche no-print" onclick="showFiche()">📄 Fiche de l'arbitre</button>
+</div>
+
+<!-- ========== ÉCRAN 3 : JEU ========== -->
+<div id="screen-game" class="screen">
+  <div class="game-header">
+    <span class="game-badge"    id="game-badge">…</span>
+    <span class="game-box-pill" id="game-box-pill">📦 1</span>
+    <span class="game-progress" id="game-progress">1 / 10</span>
+  </div>
+  <div class="progress-wrap"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="question-area">
+    <div class="card-face" id="card-face">
+      <div class="question-txt" id="question-txt">?</div>
+      <div class="divider-dashed" id="card-divider" style="display:none;"></div>
+      <div class="answer-wrap" id="answer-wrap">
+        <span class="answer-lbl">Réponse</span>
+        <span class="answer-txt" id="answer-txt">?</span>
+      </div>
+    </div>
+  </div>
+  <div class="game-actions">
+    <button class="btn-reveal" id="btn-reveal" onclick="handleReveal()">🔍 Arbitre : révéler la réponse</button>
+    <div class="judge-row" id="judge-row">
+      <button class="btn-wrong-ans"   onclick="handleAnswer(false)">✗<br><small style="font-size:18px;">Faux</small></button>
+      <button class="btn-correct-ans" onclick="handleAnswer(true)">✓<br><small style="font-size:18px;">Correct</small></button>
+    </div>
+    <button class="btn-quit-game no-print" onclick="showScreen('dashboard');renderDashboard()">← Retour (sans sauvegarder)</button>
+  </div>
+</div>
+
+<!-- ========== ÉCRAN 4 : FIN ========== -->
+<div id="screen-fin" class="screen">
+  <span class="fin-emoji" id="fin-emoji">🎉</span>
+  <h1 id="fin-title">Bravo !</h1>
+  <p class="fin-msg" id="fin-msg">Session terminée</p>
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-num" id="stat-ok"  style="color:var(--correct);">0</div><div class="stat-lbl">✓ Correctes</div></div>
+    <div class="stat-box"><div class="stat-num" id="stat-err" style="color:var(--wrong);">0</div><div class="stat-lbl">✗ Erreurs</div></div>
+  </div>
+  <div class="moves-panel" id="moves-panel"></div>
+  <div class="fin-btns">
+    <button class="btn btn-back-dash" onclick="showScreen('dashboard');renderDashboard()">📊 Tableau</button>
+  </div>
+</div>
+
+<!-- ========== ÉCRAN 5 : FICHE ========== -->
+<div id="screen-fiche" class="screen">
+  <div class="fiche-top no-print">
+    <h1>📄 Fiche de l'arbitre</h1>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" style="font-size:16px;padding:12px 22px;background:linear-gradient(135deg,#42A5F5,#0D47A1);color:white;" onclick="window.print()">🖨️ Imprimer</button>
+      <button class="btn-ghost" onclick="showScreen('dashboard')">← Retour</button>
+    </div>
+  </div>
+  <div class="fiche-panel"><h2 style="color:var(--doubles);">✌️ Les Doubles</h2><div class="fiche-grid" id="fiche-doubles"></div></div>
+  <div class="fiche-panel"><h2 style="color:var(--quasi);">🤙 Les Quasi-doubles</h2><div class="fiche-grid" id="fiche-quasi"></div></div>
+  <div class="fiche-panel"><h2 style="color:var(--comp);">🔟 Les Compléments à 10</h2><div class="fiche-grid" id="fiche-comp"></div></div>
+  <div class="fiche-panel"><h2 style="color:var(--mult);">✖️ Les Tables de multiplication</h2><div id="fiche-mult"></div></div>
+</div>
+
+<!-- ========== ÉCRAN 6 : MODULE ENSEIGNANT ========== -->
+<div id="screen-teacher" class="screen">
+  <div class="teacher-header">
+    <h1>👨‍🏫 Espace Enseignant</h1>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span class="teacher-badge">CODE ****</span>
+      <button class="btn-ghost" onclick="showScreen('accueil');renderAccueil()">← Quitter</button>
+    </div>
+  </div>
+  <div class="t-tabs">
+    <button class="t-tab-main active" onclick="switchTPanel('classes',this)">🏫 Classes</button>
+    <button class="t-tab-main"        onclick="switchTPanel('eleves',this)">👤 Élèves</button>
+    <button class="t-tab-main"        onclick="switchTPanel('cartes',this)">🃏 Cartes</button>
+    <button class="t-tab-main"        onclick="switchTPanel('config',this)">⚙️ Config</button>
+  </div>
+
+  <div class="t-panel active" id="t-panel-classes">
+    <p class="t-section-title">Toutes les classes</p>
+    <div class="t-class-grid" id="t-class-grid"></div>
+  </div>
+
+  <div class="t-panel" id="t-panel-eleves">
+    <p class="t-section-title">Sélectionner un élève</p>
+    <select class="t-select" id="t-class-sel-eleve" onchange="teacherFillStudentSel()"><option value="">-- Classe --</option></select>
+    <select class="t-select" id="t-student-select"  onchange="teacherSelectStudent()"><option value="">-- Élève --</option></select>
+    <div class="t-student-card" id="t-student-card" style="display:none;">
+      <div class="t-student-name" id="t-student-name">—</div>
+      <div class="t-boxes-mini"   id="t-boxes-mini"></div>
+      <div class="t-cat-row"      id="t-cat-row"></div>
+      <div class="t-actions">
+        <p style="font-family:'Fredoka One',cursive;font-size:16px;color:var(--teacher);margin-bottom:6px;">⚙️ Actions rapides</p>
+        <div class="t-action-row">
+          <button class="t-btn t-btn-danger" onclick="teacherResetAll()">🔄 Tout → boîte 1</button>
+          <button class="t-btn t-btn-danger" onclick="teacherDeleteStudent()">🗑 Supprimer élève</button>
+          <button class="t-btn t-btn-warn"   onclick="teacherResetCat('doubles')">✌️ Reset Doubles</button>
+          <button class="t-btn t-btn-warn"   onclick="teacherResetCat('quasi')">🤙 Reset Quasi</button>
+          <button class="t-btn t-btn-warn"   onclick="teacherResetCat('comp')">🔟 Reset Compléments</button>
+          <button class="t-btn t-btn-warn"   onclick="teacherResetCat('mult')">✖️ Reset Tables ×</button>
+          <button class="t-btn t-btn-ok"     onclick="teacherMasterCat('doubles')">✌️ Valider Doubles ⭐</button>
+          <button class="t-btn t-btn-ok"     onclick="teacherMasterCat('quasi')">🤙 Valider Quasi ⭐</button>
+          <button class="t-btn t-btn-ok"     onclick="teacherMasterCat('comp')">🔟 Valider Compléments ⭐</button>
+          <button class="t-btn t-btn-ok"     onclick="teacherMasterCat('mult')">✖️ Valider Tables × ⭐</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="t-panel" id="t-panel-cartes">
+    <p class="t-section-title">Modifier les cartes carte par carte</p>
+    <select class="t-select" id="t-class-sel-carte"   onchange="teacherFillStudentSelCarte()"><option value="">-- Classe --</option></select>
+    <select class="t-select" id="t-student-sel-carte" onchange="teacherSelectStudentCarte()"><option value="">-- Élève --</option></select>
+    <div class="t-cards-panel" id="t-cards-panel" style="display:none;">
+      <h3>🃏 <span id="t-cards-student-name">—</span></h3>
+      <div class="t-cat-tabs">
+        <button class="t-ctab t-ctab-doubles active" onclick="teacherSetCardTab('doubles',this)">✌️ Doubles</button>
+        <button class="t-ctab t-ctab-quasi"          onclick="teacherSetCardTab('quasi',this)">🤙 Quasi</button>
+        <button class="t-ctab t-ctab-comp"           onclick="teacherSetCardTab('comp',this)">🔟 Compléments</button>
+        <button class="t-ctab t-ctab-mult"           onclick="teacherSetCardTab('mult',this)">✖️ Tables ×</button>
+      </div>
+      <div class="t-card-grid" id="t-card-grid"></div>
+    </div>
+  </div>
+
+  <div class="t-panel" id="t-panel-config">
+    <p class="t-section-title">⚙️ Configuration Firebase</p>
+    <div class="setup-card" style="box-shadow:none;padding:0;">
+      <p style="font-size:15px;font-weight:700;color:var(--text-light);margin-bottom:16px;" id="t-config-status">—</p>
+      <textarea class="setup-textarea" id="t-config-input" placeholder="Collez votre firebaseConfig ici…"></textarea>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button class="modal-confirm" style="flex:1;" onclick="setupSaveConfig(true)">💾 Mettre à jour</button>
+        <button class="t-btn t-btn-danger" style="flex:1;" onclick="setupClearConfig()">🗑 Réinitialiser config</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY CODE -->
+<div class="overlay" id="overlay-lock">
+  <div class="modal" id="modal-lock">
+    <h2>🔒 Espace Enseignant</h2><p>Code à 4 chiffres</p>
+    <div class="code-dots" id="code-dots">
+      <div class="code-dot" id="dot-0"></div><div class="code-dot" id="dot-1"></div>
+      <div class="code-dot" id="dot-2"></div><div class="code-dot" id="dot-3"></div>
+    </div>
+    <div class="numpad">
+      <button class="numpad-btn" onclick="lockType('1')">1</button><button class="numpad-btn" onclick="lockType('2')">2</button><button class="numpad-btn" onclick="lockType('3')">3</button>
+      <button class="numpad-btn" onclick="lockType('4')">4</button><button class="numpad-btn" onclick="lockType('5')">5</button><button class="numpad-btn" onclick="lockType('6')">6</button>
+      <button class="numpad-btn" onclick="lockType('7')">7</button><button class="numpad-btn" onclick="lockType('8')">8</button><button class="numpad-btn" onclick="lockType('9')">9</button>
+      <button class="numpad-btn numpad-del" onclick="lockDel()">⌫</button>
+      <button class="numpad-btn" onclick="lockType('0')">0</button>
+      <button class="numpad-btn" style="background:#E8F5E9;color:#1B5E20;" onclick="lockValidate()">✓</button>
+    </div>
+    <button class="modal-cancel" onclick="closeTeacherLock()">Annuler</button>
+  </div>
+</div>
+
+<!-- OVERLAY CRÉER CLASSE -->
+<div class="overlay" id="overlay-new-class">
+  <div class="modal">
+    <h2>🏫 Nouvelle classe</h2><p>Informations de la classe</p>
+    <input type="text" class="modal-input" id="new-class-name"   placeholder="Nom (ex: CE2A)" maxlength="30" autocorrect="off">
+    <input type="text" class="modal-input" id="new-class-school" placeholder="École (ex: École Jean Moulin)" maxlength="50" autocorrect="off">
+    <div class="modal-row">
+      <button class="modal-cancel"  onclick="closeModal('overlay-new-class')">Annuler</button>
+      <button class="modal-confirm" onclick="createClass()">Créer ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY BOÎTE DÉTAIL -->
+<div class="overlay" id="overlay-box">
+  <div class="modal modal-wide">
+    <h2 id="box-overlay-title">📦 Boîte 1</h2>
+    <div class="session-info" id="box-overlay-info"></div>
+    <div class="box-overlay-grid" id="box-overlay-grid"></div>
+    <div style="margin-top:16px;">
+      <button class="modal-cancel" onclick="closeModal('overlay-box')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div class="snackbar" id="snackbar"></div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════
+// CONSTANTES
+// ═══════════════════════════════════════════════════════════
+const TEACHER_CODE = '0308';
+const BOX_COLORS   = ['#D32F2F','#E65100','#F9A825','#2E7D32','#1565C0'];
+const BOX_DESCS    = ['À apprendre','En cours…','Bientôt su','Presque !','⭐ Maîtrisé'];
+const MAX_SESSION  = 15;
+
+const ALL_CARDS = {};
+for(let i=1;i<=10;i++) ALL_CARDS[`doubles_${i}`]={id:`doubles_${i}`,cat:'doubles',q:`${i} + ${i}`,a:`${2*i}`};
+for(let i=1;i<=9;i++)  ALL_CARDS[`quasi_${i}`]  ={id:`quasi_${i}`,  cat:'quasi',  q:`${i} + ${i+1}`,a:`${2*i+1}`};
+for(let i=1;i<=9;i++)  ALL_CARDS[`comp_${i}`]   ={id:`comp_${i}`,   cat:'comp',   q:`${i} + … = 10`,a:`${10-i}`};
+for(let i=2;i<=10;i++) for(let j=1;j<=10;j++) ALL_CARDS[`mult_${i}_${j}`]={id:`mult_${i}_${j}`,cat:'mult',q:`${i} × ${j}`,a:`${i*j}`};
+const CATS={
+  doubles:{name:'Les Doubles',     emoji:'✌️',cls:'cat-doubles',color:'#E8400C'},
+  quasi:  {name:'Quasi-doubles',   emoji:'🤙',cls:'cat-quasi',  color:'#008F7A'},
+  comp:   {name:'Compléments à 10',emoji:'🔟',cls:'cat-comp',   color:'#7209B7'},
+  mult:   {name:'Tables de ×',     emoji:'✖️',cls:'cat-mult',   color:'#1145A0'},
+};
+
+// ═══════════════════════════════════════════════════════════
+// FIREBASE / STORAGE LAYER (compat SDK)
+// ═══════════════════════════════════════════════════════════
+let db = null;
+let useFirebase = false;
+let classesCache = [];
+let classesListener = null;
+let fbApp = null;
+
+function setSyncBadge(mode){
+  const el=document.getElementById('sync-badge'); if(!el) return;
+  el.style.display='block';
+  const M={ok:['🟢 Synchronisé','sync-ok'],saving:['🔄 Sync…','sync-saving'],off:['🔴 Hors ligne','sync-off'],cfg:['🟣 Local','sync-cfg']};
+  const [txt,cls]=M[mode]||M.cfg;
+  el.className='sync-badge '+cls; el.textContent=txt;
+}
+
+// ── CONFIG ─────────────────────────────────────────────────
+function loadConfig(){try{return JSON.parse(localStorage.getItem('fb_config'));}catch{return null;}}
+function saveConfig(cfg){localStorage.setItem('fb_config',JSON.stringify(cfg));}
+function clearConfig(){localStorage.removeItem('fb_config');}
+
+function parseFirebaseConfigFromText(text){
+  const fields=['apiKey','authDomain','databaseURL','projectId','storageBucket','messagingSenderId','appId'];
+  const cfg={};
+  fields.forEach(f=>{const m=text.match(new RegExp(`["']?${f}["']?\\s*:\\s*["']([^"']+)["']`));if(m)cfg[f]=m[1];});
+  if(!cfg.apiKey||!cfg.databaseURL)return null;
+  return cfg;
+}
+
+function initFirebase(cfg){
+  try{
+    if(typeof firebase==='undefined'){
+      console.error('Firebase SDK non chargé');
+      return false;
+    }
+    // Supprimer l'app existante si besoin
+    try{firebase.app('leitner').delete();}catch{}
+    fbApp=firebase.initializeApp(cfg, 'leitner');
+    db=fbApp.database();
+    useFirebase=true;
+    setSyncBadge('ok');
+    return true;
+  }catch(e){
+    console.error('Firebase init error',e);
+    db=null; useFirebase=false; setSyncBadge('off');
+    return false;
+  }
+}
+
+// ── CLASSES ────────────────────────────────────────────────
+async function fbGetClasses(){
+  if(!useFirebase){try{return JSON.parse(localStorage.getItem('leitner_classes')||'[]');}catch{return[];}}
+  const snap=await db.ref('leitner/classes').once('value');
+  const val=snap.val(); return val?Object.values(val):[];
+}
+
+async function fbSaveClasses(arr){
+  setSyncBadge('saving');
+  const obj={};arr.forEach(c=>{obj[c.id]=c;});
+  if(useFirebase){await db.ref('leitner/classes').set(obj);setSyncBadge('ok');}
+  localStorage.setItem('leitner_classes',JSON.stringify(arr));
+  if(!useFirebase)setSyncBadge('cfg');
+}
+
+async function fbGetStudentsInClass(classId){
+  if(useFirebase){
+    const snap=await db.ref(`leitner/students/${classId}`).once('value');
+    const val=snap.val(); if(!val)return[]; return Object.values(val).map(s=>s.name).sort();
+  }
+  const prefix=`leitner4_${classId}_`,names=[];
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith(prefix)){try{names.push(JSON.parse(localStorage.getItem(k)).name);}catch{}}}
+  return names.sort();
+}
+
+async function fbDeleteClass(classId){
+  setSyncBadge('saving');
+  const students=await fbGetStudentsInClass(classId);
+  for(const name of students) await fbDeleteStudent(classId,name);
+  const classes=classesCache.filter(c=>c.id!==classId);
+  await fbSaveClasses(classes); classesCache=classes;
+  setSyncBadge(useFirebase?'ok':'cfg');
+}
+
+function encName(name){return name.toLowerCase().replace(/[^a-z0-9]/g,'_');}
+
+function defaultState(name,classId){
+  const boxes={};for(const id of Object.keys(ALL_CARDS))boxes[id]=1;
+  return{name,classId,boxes,sessionCounts:{doubles:0,quasi:0,comp:0,mult:0},lastSessionDates:{doubles:null,quasi:null,comp:null,mult:null}};
+}
+function ensureSessionCounts(stu){
+  if(!stu.sessionCounts)stu.sessionCounts={doubles:0,quasi:0,comp:0,mult:0};
+  if(!stu.lastSessionDates)stu.lastSessionDates={doubles:null,quasi:null,comp:null,mult:null};
+  ['doubles','quasi','comp','mult'].forEach(k=>{
+    if(!stu.sessionCounts[k])stu.sessionCounts[k]=0;
+    if(stu.lastSessionDates[k]===undefined)stu.lastSessionDates[k]=null;
+  });
+}
+
+function todayStr(){ return new Date().toISOString().slice(0,10); } // "YYYY-MM-DD"
+
+function playedToday(catId){
+  ensureSessionCounts(st);
+  const today = todayStr();
+  // Vérification double : cache mémoire (immédiat) + Firebase (persistant)
+  return _playedTodayCache[catId] === today
+      || st.lastSessionDates[catId] === today;
+}
+
+async function fbLoadStudent(name,classId){
+  if(useFirebase){
+    const snap=await db.ref(`leitner/students/${classId}/${encName(name)}`).once('value');
+    const val=snap.val();
+    if(val){for(const id of Object.keys(ALL_CARDS))if(!val.boxes[id])val.boxes[id]=1; return val;}
+    return defaultState(name,classId);
+  }
+  const raw=localStorage.getItem(`leitner4_${classId}_${encName(name)}`);
+  if(raw){const p=JSON.parse(raw);for(const id of Object.keys(ALL_CARDS))if(!p.boxes[id])p.boxes[id]=1;return p;}
+  return defaultState(name,classId);
+}
+
+async function fbSaveStudent(stu){
+  setSyncBadge('saving');
+  if(useFirebase){await db.ref(`leitner/students/${stu.classId}/${encName(stu.name)}`).set(stu);setSyncBadge('ok');}
+  localStorage.setItem(`leitner4_${stu.classId}_${encName(stu.name)}`,JSON.stringify(stu));
+  if(!useFirebase)setSyncBadge('cfg');
+}
+
+async function fbDeleteStudent(classId,name){
+  setSyncBadge('saving');
+  if(useFirebase){await db.ref(`leitner/students/${classId}/${encName(name)}`).remove();}
+  localStorage.removeItem(`leitner4_${classId}_${encName(name)}`);
+  setSyncBadge(useFirebase?'ok':'cfg');
+}
+
+function startClassesListener(){
+  if(!useFirebase||classesListener)return;
+  classesListener=db.ref('leitner/classes');
+  classesListener.on('value',snap=>{
+    const val=snap.val(); classesCache=val?Object.values(val):[];
+    if(document.getElementById('screen-accueil').classList.contains('active')
+       &&document.getElementById('acc-step1').style.display!=='none') renderClassGridUI();
+    if(document.getElementById('screen-teacher').classList.contains('active')){
+      renderTeacherClassGrid(); teacherFillAllSelects();
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// SETUP SCREEN
+// ═══════════════════════════════════════════════════════════
+function setupSaveConfig(fromTeacher=false){
+  const raw=document.getElementById('t-config-input').value;
+  const cfg=parseFirebaseConfigFromText(raw);
+  if(!cfg){snack('❌ Config invalide — vérifiez le texte collé (databaseURL manquant ?)',3500);return;}
+  saveConfig(cfg);
+  const ok=initFirebase(cfg);
+  if(ok){
+    snack('🔥 Firebase connecté ! Données synchronisées.',3000);
+    startClassesListener();
+    fbGetClasses().then(c=>{classesCache=c;});
+    if(!fromTeacher){showScreen('accueil');renderAccueil();}
+    else snack('✅ Firebase mis à jour');
+  }else{
+    snack('❌ Connexion Firebase échouée — vérifiez la config',3500);
+  }
+}
+
+function setupUseLocal(){ setSyncBadge('cfg'); snack('📱 Mode local activé',2000); showScreen('accueil'); renderAccueil(); }
+
+function setupClearConfig(){
+  if(!confirm('Supprimer la configuration Firebase ?'))return;
+  clearConfig(); useFirebase=false; db=null; setSyncBadge('cfg'); snack('🗑 Config supprimée');
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAVIGATION / SNACK
+// ═══════════════════════════════════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  window.scrollTo(0,0);
+}
+let _snT;
+function snack(msg,dur=2400){
+  const el=document.getElementById('snackbar');el.textContent=msg;el.classList.add('show');
+  clearTimeout(_snT);_snT=setTimeout(()=>el.classList.remove('show'),dur);
+}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// ═══════════════════════════════════════════════════════════
+// ACCUEIL
+// ═══════════════════════════════════════════════════════════
+let currentClass=null, currentStudent=null, st=null;
+
+async function renderAccueil(){ accGoStep1(); }
+
+function accGoStep1(){
+  currentClass=null;
+  document.getElementById('acc-step1').style.display='block';
+  document.getElementById('acc-step2').style.display='none';
+  document.getElementById('input-prenom').value='';
+  updateStepBar(0); renderClassGridUI();
+}
+
+function accGoStep2(cls){
+  currentClass=cls;
+  document.getElementById('acc-step1').style.display='none';
+  document.getElementById('acc-step2').style.display='flex';
+  document.getElementById('csh-school').textContent=cls.school||'—';
+  document.getElementById('csh-name').textContent=cls.name;
+  document.getElementById('input-prenom').value=currentStudent||'';
+  updateStepBar(1); renderStudentChips(cls.id);
+}
+
+function updateStepBar(step){
+  document.getElementById('step-dot-0').className='step-dot '+(step>0?'done':'active');
+  document.getElementById('step-dot-1').className='step-dot '+(step>0?'active':'');
+  document.getElementById('step-label').textContent=step===0?'Choix de la classe':'Choix de l\'élève';
+}
+
+function getStudentsInClassLocal(classId){
+  const prefix=`leitner4_${classId}_`,names=[];
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith(prefix)){try{names.push(JSON.parse(localStorage.getItem(k)).name);}catch{}}}
+  return names.sort();
+}
+
+// Calcule le score moyen d'une classe (0-100%)
+// Score = moyenne des boîtes de toutes les cartes de tous les élèves, ramenée sur 100
+function computeClassScore(classId){
+  const names=getStudentsInClassLocal(classId);
+  if(!names.length)return null;
+  const cardIds=Object.keys(ALL_CARDS);
+  const totalCards=cardIds.length;
+  let sumAll=0,count=0;
+  // Distribution par boîte pour le mini graphique
+  const dist=[0,0,0,0,0];
+  names.forEach(name=>{
+    const raw=localStorage.getItem(`leitner4_${classId}_${encName(name)}`);
+    if(!raw)return;
+    try{
+      const stu=JSON.parse(raw);
+      cardIds.forEach(id=>{
+        const box=(stu.boxes&&stu.boxes[id])||1;
+        sumAll+=box; count++;
+        dist[box-1]++;
+      });
+    }catch{}
+  });
+  if(!count)return null;
+  const avgBox=sumAll/count;            // 1..5
+  const score=Math.round((avgBox-1)/4*100); // 0..100
+  return{score,avgBox,dist,names};
+}
+
+// Classement des écoles
+function renderSchoolRanking(){
+  // Regrouper les classes par école
+  const schools={};
+  classesCache.forEach(cls=>{
+    const school=cls.school||'—';
+    if(!schools[school])schools[school]={name:school,scores:[]};
+    const info=computeClassScore(cls.id);
+    if(info)schools[school].scores.push(info.score);
+  });
+  const ranked=Object.values(schools)
+    .filter(s=>s.scores.length>0)
+    .map(s=>({name:s.name,avg:Math.round(s.scores.reduce((a,b)=>a+b,0)/s.scores.length)}))
+    .sort((a,b)=>b.avg-a.avg);
+  if(ranked.length<2)return ''; // Pas utile si 1 seule école
+  const medals=['🥇','🥈','🥉'];
+  const max=ranked[0].avg||1;
+  let html='<div class="school-ranking"><div class="school-ranking-title">🏆 Classement des écoles</div>';
+  ranked.forEach((s,i)=>{
+    const pct=Math.round(s.avg/max*100);
+    html+=`<div class="school-rank-row">
+      <span class="school-rank-pos">${medals[i]||'#'+(i+1)}</span>
+      <span class="school-rank-name">${s.name}</span>
+      <div class="school-rank-bar-wrap"><div class="school-rank-fill" style="width:${pct}%;background:${i===0?'linear-gradient(90deg,#FFD700,#FF8C00)':i===1?'linear-gradient(90deg,#C0C0C0,#888)':'linear-gradient(90deg,#CD7F32,#8B4513)'};"></div></div>
+      <span class="school-rank-score">${s.avg}%</span>
+    </div>`;
+  });
+  html+='</div>';
+  return html;
+}
+
+async function renderClassGridUI(){
+  const grid=document.getElementById('class-grid');
+  grid.innerHTML='<div class="class-loading"><div class="spinner"></div>Chargement…</div>';
+  if(classesCache.length===0){
+    classesCache=useFirebase?await fbGetClasses():(()=>{try{return JSON.parse(localStorage.getItem('leitner_classes')||'[]');}catch{return[];}})();
+  }
+  grid.innerHTML='';
+
+  // Classement écoles (affiché au-dessus si plusieurs écoles)
+  const rankHtml=renderSchoolRanking();
+  if(rankHtml){
+    const rankDiv=document.createElement('div');
+    rankDiv.style.gridColumn='1/-1';
+    rankDiv.innerHTML=rankHtml;
+    grid.appendChild(rankDiv);
+  }
+
+  classesCache.forEach(cls=>{
+    const students=getStudentsInClassLocal(cls.id);
+    const info=computeClassScore(cls.id);
+    const div=document.createElement('div');div.className='class-card';
+
+    // Mini graphique à barres (distribution par boîte)
+    let chartHtml='';
+    if(info&&info.names.length>0){
+      const total=info.dist.reduce((a,b)=>a+b,0)||1;
+      const barColors=['#D32F2F','#E65100','#F9A825','#2E7D32','#1565C0'];
+      const maxH=28;
+      const bars=info.dist.map((v,i)=>{
+        const h=Math.max(3,Math.round(v/total*maxH));
+        return `<div class="cc-bar" style="height:${h}px;background:${barColors[i]};" title="Boîte ${i+1}: ${v} cartes"></div>`;
+      }).join('');
+      const lbls=[1,2,3,4,'⭐'].map(l=>`<div class="cc-bar-lbl">${l}</div>`).join('');
+      const scoreColor=info.score<30?'#E53935':info.score<60?'#FB8C00':info.score<80?'#F9A825':'#2E7D32';
+      chartHtml=`<div class="cc-chart-wrap">
+        <div class="cc-chart-bars">${bars}</div>
+        <div class="cc-bar-labels">${lbls}</div>
+        <div class="cc-score-bar"><div class="cc-score-fill" style="width:${info.score}%;background:${scoreColor};"></div></div>
+        <div class="cc-score" style="color:${scoreColor};">${info.score}% de progression</div>
+      </div>`;
+    }else{
+      chartHtml='<div class="cc-no-data">Aucune donnée</div>';
+    }
+
+    div.innerHTML=`
+      <span class="cc-school">${cls.school||'—'}</span>
+      <span class="cc-name">${cls.name}</span>
+      <span class="cc-count">${students.length} élève${students.length!==1?'s':''}</span>
+      ${chartHtml}`;
+    div.onclick=()=>accGoStep2(cls);
+    grid.appendChild(div);
+  });
+  const btn=document.createElement('div');btn.className='class-card class-card-new no-print';
+  btn.innerHTML='＋ Nouvelle classe';btn.onclick=openNewClassModal;
+  grid.appendChild(btn);
+}
+
+async function renderStudentChips(classId){
+  const wrap=document.getElementById('students-chips');
+  wrap.innerHTML='<div class="class-loading"><div class="spinner"></div></div>';
+  const names=await fbGetStudentsInClass(classId);
+  wrap.innerHTML='';
+  if(names.length===0){wrap.innerHTML='<span class="chip-empty">Aucun élève — saisir un prénom ci-dessous</span>';return;}
+  names.forEach(name=>{
+    const b=document.createElement('button');b.className='chip';b.textContent=name;
+    b.onclick=()=>{document.getElementById('input-prenom').value=name;handleLogin();};
+    wrap.appendChild(b);
+  });
+}
+
+async function handleLogin(){
+  if(!currentClass){snack('Sélectionne d\'abord une classe !');return;}
+  const raw=document.getElementById('input-prenom').value.trim();
+  if(!raw){const inp=document.getElementById('input-prenom');inp.style.borderColor='#E53935';inp.focus();setTimeout(()=>inp.style.borderColor='',1600);return;}
+  const name=raw.charAt(0).toUpperCase()+raw.slice(1);
+  currentStudent=name;
+  st=await fbLoadStudent(name,currentClass.id);
+  st.name=name;st.classId=currentClass.id;
+  await fbSaveStudent(st);
+  // Vider le cache mémoire pour ce nouvel élève
+  // (les dates Firebase seront chargées depuis st.lastSessionDates)
+  Object.keys(_playedTodayCache).forEach(k => delete _playedTodayCache[k]);
+  renderDashboard();showScreen('dashboard');
+}
+document.getElementById('input-prenom').addEventListener('keydown',e=>{if(e.key==='Enter')handleLogin();});
+
+// ═══════════════════════════════════════════════════════════
+// CLASSES CRUD
+// ═══════════════════════════════════════════════════════════
+function genId(){return'cls_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);}
+
+function openNewClassModal(){
+  document.getElementById('new-class-name').value='';document.getElementById('new-class-school').value='';
+  document.getElementById('overlay-new-class').classList.add('open');
+  setTimeout(()=>document.getElementById('new-class-name').focus(),200);
+}
+document.getElementById('new-class-name').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('new-class-school').focus();});
+document.getElementById('new-class-school').addEventListener('keydown',e=>{if(e.key==='Enter')createClass();});
+
+async function createClass(){
+  const name=document.getElementById('new-class-name').value.trim();
+  const school=document.getElementById('new-class-school').value.trim();
+  if(!name){document.getElementById('new-class-name').style.borderColor='#E53935';document.getElementById('new-class-name').focus();setTimeout(()=>document.getElementById('new-class-name').style.borderColor='',1500);return;}
+  const cls={id:genId(),name,school};
+  classesCache=[...classesCache,cls];
+  await fbSaveClasses(classesCache);
+  closeModal('overlay-new-class');
+  renderClassGridUI();renderTeacherClassGrid();teacherFillAllSelects();
+  snack(`✓ Classe "${name}" créée !`);
+}
+
+async function deleteClass(classId){
+  const cls=classesCache.find(c=>c.id===classId);if(!cls)return;
+  const students=await fbGetStudentsInClass(classId);
+  if(!confirm(`Supprimer "${cls.name}" et ses ${students.length} élève(s) ?`))return;
+  await fbDeleteClass(classId);
+  classesCache=classesCache.filter(c=>c.id!==classId);
+  renderClassGridUI();renderTeacherClassGrid();teacherFillAllSelects();
+  snack(`🗑 Classe "${cls.name}" supprimée`);
+}
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function catCards(catId){return Object.values(ALL_CARDS).filter(c=>c.cat===catId);}
+function boxDist(catId){const d=[0,0,0,0,0];catCards(catId).forEach(c=>{d[(st.boxes[c.id]||1)-1]++;});return d;}
+function totalDist(){const d=[0,0,0,0,0];Object.keys(ALL_CARDS).forEach(id=>{d[(st.boxes[id]||1)-1]++;});return d;}
+
+// Ouvre le détail d'une boîte
+function openBoxDetail(boxNum){
+  const cards=Object.values(ALL_CARDS).filter(c=>(st.boxes[c.id]||1)===boxNum);
+  const colors=['','#D32F2F','#E65100','#F9A825','#2E7D32','#1565C0'];
+  const descs=['','Toutes les séances','1 séance sur 2','1 séance sur 4','1 séance sur 8','✅ Maîtrisé — plus jamais proposé'];
+  document.getElementById('box-overlay-title').innerHTML=`<span style="color:${colors[boxNum]}">📦 Boîte ${boxNum}</span>`;
+  document.getElementById('box-overlay-info').innerHTML=`<b>${cards.length} carte${cards.length>1?'s':''}</b> · ${descs[boxNum]}`;
+  const grid=document.getElementById('box-overlay-grid');
+  if(cards.length===0){grid.innerHTML='<div class="box-overlay-empty">Aucune carte dans cette boîte</div>';  }
+  else{
+    grid.innerHTML='';
+    // Grouper par catégorie
+    Object.entries(CATS).forEach(([catId,cat])=>{
+      const catCards2=cards.filter(c=>c.cat===catId);
+      if(!catCards2.length)return;
+      catCards2.forEach(c=>{
+        grid.innerHTML+=`<div class="box-overlay-card"><div class="box-overlay-cat">${cat.emoji}</div><div class="box-overlay-q">${c.q} =</div><div class="box-overlay-a" style="color:${cat.color};">${c.a}</div></div>`;
+      });
+    });
+  }
+  document.getElementById('overlay-box').classList.add('open');
+}
+
+// ═══════════════════════════════════════════════════════════
+// LEITNER : espacement réel par domaine
+// ═══════════════════════════════════════════════════════════
+const BOX_FREQ = [1, 2, 4, 8, Infinity];
+
+function getCardsForSession(catId, count){
+  const cards = [];
+  catCards(catId).forEach(c => {
+    const box = st.boxes[c.id] || 1;
+    if(box === 5) return; // boîte 5 = validé à vie
+    if(count % BOX_FREQ[box - 1] === 0) cards.push({...c, box});
+  });
+  return cards.sort((a,b) => a.box !== b.box ? a.box - b.box : Math.random() - .5);
+}
+
+// Renvoie 0 si jouable maintenant, N si dans N séances, -1 si tout maîtrisé
+function sessionsUntilAvailable(catId){
+  ensureSessionCounts(st);
+  // Tout validé en boîte 5 ?
+  const allDone = catCards(catId).every(c => (st.boxes[c.id]||1) === 5);
+  if(allDone) return -1;
+  // Déjà joué aujourd'hui → bloqué jusqu'à demain
+  if(playedToday(catId)) return 'today';
+  // Sinon vérifier l'espacement Leitner
+  const nextCount = (st.sessionCounts[catId] || 0) + 1;
+  for(let delta = 0; delta <= 16; delta++){
+    if(getCardsForSession(catId, nextCount + delta).length > 0) return delta;
+  }
+  return 16;
+}
+
+function renderDashboard(){
+  const cn = currentClass ? ` · ${currentClass.name}` : '';
+  document.getElementById('dash-greeting').textContent = `${currentStudent}${cn} 👋`;
+  // Numéro de séance = max des sessionCounts sur tous les domaines
+  ensureSessionCounts(st);
+  const maxSc = Math.max(...Object.values(st.sessionCounts));
+  document.getElementById('session-num').textContent = maxSc > 0 ? maxSc : 1;
+  const td = totalDist(), boxRow = document.getElementById('boxes-row');
+  boxRow.innerHTML = '';
+  for(let i = 0; i < 5; i++){
+    const div = document.createElement('div'); div.className = 'box-tile';
+    div.title = `Voir les cartes de la boîte ${i+1}`;
+    div.innerHTML = `<div class="box-visual" style="border-color:${BOX_COLORS[i]};background:${BOX_COLORS[i]}18;"><span class="box-num-label" style="color:${BOX_COLORS[i]};">${i+1}</span><span class="box-count-label">${td[i]}</span></div><span class="box-desc">${BOX_DESCS[i]}</span>`;
+    div.onclick = () => openBoxDetail(i+1);
+    boxRow.appendChild(div);
+  }
+  const grid = document.getElementById('cat-grid'); grid.innerHTML = '';
+  Object.entries(CATS).forEach(([id, cat]) => {
+    const cards = catCards(id), dist = boxDist(id);
+    const wait = sessionsUntilAvailable(id);
+    const btn = document.createElement('button'); btn.className = `cat-btn ${cat.cls}`;
+    if(wait === -1){
+      btn.classList.add('cat-btn-complete');
+      btn.innerHTML = `<span class="cat-emoji">${cat.emoji}</span><span class="cat-name">${cat.name}</span><span class="cat-sub">Tout maîtrisé ! 🎉</span>`;
+      btn.onclick = () => snack('⭐ Tout est maîtrisé dans cette série !', 2000);
+    } else if(wait === 'today'){
+      btn.classList.add('cat-btn-locked');
+      btn.innerHTML = `<span class="cat-emoji">${cat.emoji}</span><span class="cat-name">${cat.name}</span><span class="cat-sub">✓ Fait aujourd'hui — à demain !</span>`;
+      btn.onclick = () => snack("✅ Cette série a déjà été faite aujourd'hui. Reviens demain !", 3000);
+    } else if(wait === 0){
+      const due = getCardsForSession(id, (st.sessionCounts[id]||0) + 1);
+      btn.innerHTML = `<span class="cat-emoji">${cat.emoji}</span><span class="cat-name">${cat.name}</span><span class="cat-sub">⭐${dist[4]}/${cards.length} · ${due.length} carte${due.length>1?'s':''} à voir</span>`;
+      btn.onclick = () => startSession(id);
+    } else {
+      btn.classList.add('cat-btn-locked');
+      const msg = wait === 1 ? 'Disponible à la prochaine séance' : `Disponible dans ${wait} séances`;
+      btn.innerHTML = `<span class="cat-emoji">${cat.emoji}</span><span class="cat-name">${cat.name}</span><span class="cat-sub">${msg}</span>`;
+      btn.onclick = () => snack(`🔒 ${cat.name} : ${msg.toLowerCase()}`, 2500);
+    }
+    grid.appendChild(btn);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// SESSION / JEU
+// ═══════════════════════════════════════════════════════════
+let session=null;
+// Verrou mémoire : catIds joués aujourd'hui dans cette session navigateur
+// Persist même si Firebase n'a pas encore fini de sauvegarder
+const _playedTodayCache = {};
+
+async function startSession(catId){
+  ensureSessionCounts(st);
+  const today = todayStr();
+  _playedTodayCache[catId] = today;        // verrou immédiat en mémoire
+  st.sessionCounts[catId]=(st.sessionCounts[catId]||0)+1;
+  st.lastSessionDates[catId]=today;        // persisté dans Firebase
+  const count=st.sessionCounts[catId];
+  const toPlay=getCardsForSession(catId,count).slice(0,MAX_SESSION);
+  session={catId,cards:toPlay,index:0,correct:0,wrong:0,moves:[]};
+  await fbSaveStudent(st);                 // on attend la sauvegarde avant de commencer
+  renderCard();showScreen('game');
+}
+
+
+
+function renderCard(){
+  const card=session.cards[session.index],cat=CATS[session.catId],total=session.cards.length,idx=session.index;
+  const badge=document.getElementById('game-badge');badge.textContent=`${cat.emoji} ${cat.name}`;badge.style.background=cat.color;
+  const pill=document.getElementById('game-box-pill');pill.textContent=`📦 Boîte ${card.box}`;pill.style.background=BOX_COLORS[card.box-1];
+  document.getElementById('game-progress').textContent=`${idx+1} / ${total}`;
+  const fill=document.getElementById('progress-fill');fill.style.width=`${(idx/total)*100}%`;fill.style.background=cat.color;
+  document.getElementById('question-txt').textContent=card.cat==='comp'?card.q:`${card.q} = ?`;
+  document.getElementById('answer-txt').textContent=card.a;document.getElementById('answer-txt').style.color=cat.color;
+  document.getElementById('card-divider').style.display='none';
+  document.getElementById('answer-wrap').classList.remove('show');
+  document.getElementById('btn-reveal').style.display='block';
+  document.getElementById('judge-row').classList.remove('show');
+  const face=document.getElementById('card-face');face.style.borderTopColor=cat.color;face.classList.remove('flash-ok','flash-err');
+}
+
+function handleReveal(){
+  document.getElementById('card-divider').style.display='block';
+  document.getElementById('answer-wrap').classList.add('show');
+  document.getElementById('btn-reveal').style.display='none';
+  document.getElementById('judge-row').classList.add('show');
+}
+
+async function handleAnswer(ok){
+  const card=session.cards[session.index],face=document.getElementById('card-face');
+  const oldBox=card.box,newBox=ok?Math.min(oldBox+1,5):1;
+  if(ok){session.correct++;face.classList.add('flash-ok');}else{session.wrong++;face.classList.add('flash-err');}
+  st.boxes[card.id]=newBox;card.box=newBox;
+  session.moves.push({q:card.q,oldBox,newBox,ok});
+  await fbSaveStudent(st);
+  setTimeout(()=>{session.index++;if(session.index>=session.cards.length){renderFin();showScreen('fin');}else renderCard();},380);
+}
+
+// ═══════════════════════════════════════════════════════════
+// FIN
+// ═══════════════════════════════════════════════════════════
+function renderFin(){
+  const{correct,wrong,moves,cards}=session,total=cards.length,pct=total?Math.round(correct/total*100):0;
+  const tier=pct===100?3:pct>=80?2:pct>=50?1:0;
+  const emojis=['💪','👍','🎉','🌟'],titles=['Continue !','Bien joué !','Excellent !','Parfait !'],
+        msgs=['Entraîne-toi encore !','Bonne session !',`${pct}% correctes. Bravo !`,'Toutes les cartes !'];
+  document.getElementById('fin-emoji').textContent=emojis[tier];document.getElementById('fin-title').textContent=titles[tier];
+  document.getElementById('fin-msg').textContent=msgs[tier];document.getElementById('stat-ok').textContent=correct;document.getElementById('stat-err').textContent=wrong;
+  const promoted=moves.filter(m=>m.newBox>m.oldBox),demoted=moves.filter(m=>m.newBox<m.oldBox);
+  let html='<h3 class="moves-title">📦 Mouvements des cartes</h3>';
+  if(promoted.length){html+=`<p style="font-weight:800;color:var(--correct);margin-bottom:6px;">⬆️ Avancées (${promoted.length})</p><div class="tags-row">`;promoted.forEach(m=>html+=`<span class="tag tag-ok">${m.q} → boîte ${m.newBox}</span>`);html+='</div>';}
+  if(demoted.length){html+=`<p style="font-weight:800;color:var(--wrong);margin:12px 0 6px;">⬇️ À retravailler (${demoted.length})</p><div class="tags-row">`;demoted.forEach(m=>html+=`<span class="tag tag-err">${m.q}</span>`);html+='</div>';}
+  if(!promoted.length&&!demoted.length)html+='<p style="color:var(--text-light);font-weight:700;">Aucun mouvement.</p>';
+  document.getElementById('moves-panel').innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════════
+// FICHE ARBITRE
+// ═══════════════════════════════════════════════════════════
+function showFiche(){renderFiche();showScreen('fiche');}
+function renderFiche(){
+  const fd=document.getElementById('fiche-doubles');fd.innerHTML='';
+  for(let i=1;i<=10;i++){const c=ALL_CARDS[`doubles_${i}`];fd.innerHTML+=`<div class="fiche-card"><div class="fiche-q">${c.q} =</div><div class="fiche-a" style="color:var(--doubles);">${c.a}</div></div>`;}
+  const fq=document.getElementById('fiche-quasi');fq.innerHTML='';
+  for(let i=1;i<=9;i++){const c=ALL_CARDS[`quasi_${i}`];fq.innerHTML+=`<div class="fiche-card"><div class="fiche-q">${c.q} =</div><div class="fiche-a" style="color:var(--quasi);">${c.a}</div></div>`;}
+  const fc=document.getElementById('fiche-comp');fc.innerHTML='';
+  for(let i=1;i<=9;i++){const c=ALL_CARDS[`comp_${i}`];fc.innerHTML+=`<div class="fiche-card"><div class="fiche-q">${c.q} =</div><div class="fiche-a" style="color:var(--comp);">${c.a}</div></div>`;}
+  const fm=document.getElementById('fiche-mult');fm.innerHTML='';
+  for(let i=2;i<=10;i++){let h=`<div class="mult-table-block"><div class="mult-table-title" style="color:var(--mult);">Table de ${i}</div><div class="mult-row">`;for(let j=1;j<=10;j++){const c=ALL_CARDS[`mult_${i}_${j}`];h+=`<div class="mult-item"><div class="mq">${c.q} =</div><div class="ma">${c.a}</div></div>`;}h+='</div></div>';fm.innerHTML+=h;}
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODULE ENSEIGNANT — CODE
+// ═══════════════════════════════════════════════════════════
+let lockInput='';
+function openTeacherLock(){lockInput='';updateLockDots();document.getElementById('overlay-lock').classList.add('open');}
+function closeTeacherLock(){document.getElementById('overlay-lock').classList.remove('open');lockInput='';updateLockDots();}
+function lockType(d){if(lockInput.length>=4)return;lockInput+=d;updateLockDots();if(lockInput.length===4)setTimeout(lockValidate,120);}
+function lockDel(){lockInput=lockInput.slice(0,-1);updateLockDots();}
+function lockValidate(){
+  if(lockInput===TEACHER_CODE){closeTeacherLock();openTeacherPanel();}
+  else{const m=document.getElementById('modal-lock');m.classList.add('shake');setTimeout(()=>{m.classList.remove('shake');lockInput='';updateLockDots();},400);}
+}
+function updateLockDots(){for(let i=0;i<4;i++)document.getElementById('dot-'+i).classList.toggle('filled',i<lockInput.length);}
+
+// ═══════════════════════════════════════════════════════════
+// MODULE ENSEIGNANT — PANEL
+// ═══════════════════════════════════════════════════════════
+let teacherSt=null,tCardTab='doubles',tCardStudent=null;
+
+async function openTeacherPanel(){
+  switchTPanel('classes',document.querySelector('.t-tab-main'));
+  await renderTeacherClassGrid();
+  await teacherFillAllSelects();
+  const cfg=loadConfig();
+  if(cfg){document.getElementById('t-config-input').value=JSON.stringify(cfg,null,2);document.getElementById('t-config-status').textContent=useFirebase?'🟢 Firebase connecté':'🔴 Config présente mais non connectée';}
+  else{document.getElementById('t-config-status').textContent='🟣 Aucune config — mode local';}
+  showScreen('teacher');
+}
+
+function switchTPanel(id,btn){
+  document.querySelectorAll('.t-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.t-tab-main').forEach(b=>b.classList.remove('active'));
+  document.getElementById('t-panel-'+id).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+
+async function renderTeacherClassGrid(){
+  const classes=useFirebase?await fbGetClasses():(()=>{try{return JSON.parse(localStorage.getItem('leitner_classes')||'[]');}catch{return[];}})();
+  classesCache=classes;
+  const grid=document.getElementById('t-class-grid');grid.innerHTML='';
+  classes.forEach(cls=>{
+    const students=getStudentsInClassLocal(cls.id);
+    const div=document.createElement('div');div.className='t-class-card';
+    let chips='';students.slice(0,6).forEach(n=>{chips+=`<span class="t-class-student-chip">${n}</span>`;});
+    if(students.length>6)chips+=`<span class="t-class-student-chip">+${students.length-6}</span>`;
+    div.innerHTML=`<div class="t-class-card-header"><div class="t-class-info"><div class="tc-school">${cls.school||'—'}</div><div class="tc-name">${cls.name}</div><div class="tc-count">${students.length} élève${students.length!==1?'s':''}</div></div><button class="t-class-del" onclick="deleteClass('${cls.id}')">🗑️</button></div><div class="t-class-students">${chips||'<span style="font-size:13px;color:var(--text-light);font-style:italic;">Aucun élève</span>'}</div>`;
+    grid.appendChild(div);
+  });
+  const btn=document.createElement('div');btn.className='t-class-new';btn.innerHTML='＋ Créer une classe';btn.onclick=openNewClassModal;grid.appendChild(btn);
+}
+
+async function teacherFillAllSelects(){
+  await teacherFillClassSel('t-class-sel-eleve');await teacherFillClassSel('t-class-sel-carte');
+  document.getElementById('t-student-select').innerHTML='<option value="">-- Élève --</option>';
+  document.getElementById('t-student-sel-carte').innerHTML='<option value="">-- Élève --</option>';
+  document.getElementById('t-student-card').style.display='none';
+  document.getElementById('t-cards-panel').style.display='none';
+  teacherSt=null;tCardStudent=null;
+}
+async function teacherFillClassSel(selId){
+  const sel=document.getElementById(selId);sel.innerHTML='<option value="">-- Classe --</option>';
+  classesCache.forEach(cls=>{const o=document.createElement('option');o.value=cls.id;o.textContent=`${cls.school?cls.school+' · ':''}${cls.name}`;sel.appendChild(o);});
+}
+async function teacherFillStudentSel(){
+  const classId=document.getElementById('t-class-sel-eleve').value;
+  const sel=document.getElementById('t-student-select');sel.innerHTML='<option value="">-- Élève --</option>';
+  document.getElementById('t-student-card').style.display='none';teacherSt=null;
+  if(!classId)return;
+  const names=await fbGetStudentsInClass(classId);
+  names.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
+}
+async function teacherFillStudentSelCarte(){
+  const classId=document.getElementById('t-class-sel-carte').value;
+  const sel=document.getElementById('t-student-sel-carte');sel.innerHTML='<option value="">-- Élève --</option>';
+  document.getElementById('t-cards-panel').style.display='none';
+  if(!classId)return;
+  const names=await fbGetStudentsInClass(classId);
+  names.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
+}
+async function teacherSelectStudent(){
+  const classId=document.getElementById('t-class-sel-eleve').value,name=document.getElementById('t-student-select').value;
+  if(!name||!classId){document.getElementById('t-student-card').style.display='none';teacherSt=null;return;}
+  teacherSt=await fbLoadStudent(name,classId);renderTeacherCard();document.getElementById('t-student-card').style.display='block';
+}
+function renderTeacherCard(){
+  if(!teacherSt)return;
+  document.getElementById('t-student-name').textContent=`👤 ${teacherSt.name}`;
+  const d=[0,0,0,0,0];Object.keys(ALL_CARDS).forEach(id=>{d[(teacherSt.boxes[id]||1)-1]++;});
+  const bm=document.getElementById('t-boxes-mini');bm.innerHTML='';
+  for(let i=0;i<5;i++)bm.innerHTML+=`<div class="t-box-mini" style="border-color:${BOX_COLORS[i]};background:${BOX_COLORS[i]}18;"><div class="tbm-num" style="color:${BOX_COLORS[i]};">${i+1}</div><div class="tbm-cnt">${d[i]}</div></div>`;
+  const cr=document.getElementById('t-cat-row');cr.innerHTML='';
+  Object.entries(CATS).forEach(([id,cat])=>{
+    const cards=catCards(id),mastered=cards.filter(c=>(teacherSt.boxes[c.id]||1)===5).length,pct=Math.round(mastered/cards.length*100);
+    cr.innerHTML+=`<div class="t-cat-item"><div class="t-cat-label"><span>${cat.emoji} ${cat.name}</span><span style="color:${cat.color};">${mastered}/${cards.length} (${pct}%)</span></div><div class="t-bar-wrap"><div class="t-bar-fill" style="width:${pct}%;background:${cat.color};"></div></div></div>`;
+  });
+}
+async function teacherSelectStudentCarte(){
+  const classId=document.getElementById('t-class-sel-carte').value,name=document.getElementById('t-student-sel-carte').value;
+  if(!name||!classId){document.getElementById('t-cards-panel').style.display='none';tCardStudent=null;return;}
+  tCardStudent=await fbLoadStudent(name,classId);
+  document.getElementById('t-cards-student-name').textContent=name;
+  tCardTab='doubles';document.querySelectorAll('.t-ctab').forEach(t=>t.classList.remove('active'));document.querySelector('.t-ctab-doubles').classList.add('active');
+  renderTeacherCardGrid();document.getElementById('t-cards-panel').style.display='block';
+}
+function renderTeacherCardGrid(){
+  if(!tCardStudent)return;
+  const grid=document.getElementById('t-card-grid');grid.innerHTML='';
+  catCards(tCardTab).forEach(card=>{
+    const box=tCardStudent.boxes[card.id]||1;
+    const div=document.createElement('div');div.className='t-card-item';
+    div.innerHTML=`<div class="t-card-q">${card.q} = <b>${card.a}</b></div><select class="t-card-box-sel sel-${box}" onchange="teacherSetCardBox('${card.id}',this)"><option value="1" ${box===1?'selected':''}>📦 Boîte 1</option><option value="2" ${box===2?'selected':''}>📦 Boîte 2</option><option value="3" ${box===3?'selected':''}>📦 Boîte 3</option><option value="4" ${box===4?'selected':''}>📦 Boîte 4</option><option value="5" ${box===5?'selected':''}>⭐ Boîte 5</option></select>`;
+    grid.appendChild(div);
+  });
+}
+async function teacherSetCardBox(cardId,sel){
+  const nb=parseInt(sel.value);tCardStudent.boxes[cardId]=nb;sel.className=`t-card-box-sel sel-${nb}`;
+  await fbSaveStudent(tCardStudent);
+  if(teacherSt&&teacherSt.name===tCardStudent.name&&teacherSt.classId===tCardStudent.classId){teacherSt=tCardStudent;renderTeacherCard();}
+  snack(`Carte → boîte ${nb} ✓`);
+}
+function teacherSetCardTab(catId,btn){tCardTab=catId;document.querySelectorAll('.t-ctab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');renderTeacherCardGrid();}
+async function teacherResetAll(){if(!teacherSt)return;if(!confirm(`Tout remettre en boîte 1 pour ${teacherSt.name} ?`))return;Object.keys(teacherSt.boxes).forEach(id=>{teacherSt.boxes[id]=1;});await fbSaveStudent(teacherSt);renderTeacherCard();if(tCardStudent&&tCardStudent.name===teacherSt.name)renderTeacherCardGrid();if(st&&st.name===teacherSt.name)st=teacherSt;snack(`✓ ${teacherSt.name} : tout remis boîte 1`);}
+async function teacherResetCat(catId){if(!teacherSt)return;catCards(catId).forEach(c=>{teacherSt.boxes[c.id]=1;});await fbSaveStudent(teacherSt);renderTeacherCard();if(tCardStudent&&tCardStudent.name===teacherSt.name)renderTeacherCardGrid();snack(`✓ ${CATS[catId].name} remis boîte 1`);}
+async function teacherMasterCat(catId){if(!teacherSt)return;catCards(catId).forEach(c=>{teacherSt.boxes[c.id]=5;});await fbSaveStudent(teacherSt);renderTeacherCard();if(tCardStudent&&tCardStudent.name===teacherSt.name)renderTeacherCardGrid();snack(`⭐ ${CATS[catId].name} passé en boîte 5`);}
+async function teacherDeleteStudent(){
+  if(!teacherSt)return;
+  const name=teacherSt.name,classId=teacherSt.classId;
+  if(!confirm(`Supprimer définitivement ${name} ?`))return;
+  await fbDeleteStudent(classId,name);
+  if(currentStudent===name){currentStudent=null;st=null;}
+  await teacherFillStudentSel();
+  document.getElementById('t-student-card').style.display='none';teacherSt=null;
+  await renderTeacherClassGrid();snack(`🗑 ${name} supprimé`);
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+
+// ═══ CONFIG FIREBASE INTÉGRÉE ═══════════════════════════════
+const FIREBASE_CONFIG_BUILTIN = {
+  apiKey: "AIzaSyDCgpe4_ecGSAFV2LeyndEvedmLmICLJTY",
+  authDomain: "calculmental-b944d.firebaseapp.com",
+  databaseURL: "https://calculmental-b944d-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "calculmental-b944d",
+  storageBucket: "calculmental-b944d.firebasestorage.app",
+  messagingSenderId: "57059605275",
+  appId: "1:57059605275:web:85c7260e1d3e28631ef1be"
+};
+
+async function init(){
+  // Attendre que le DOM et les scripts externes soient prêts
+  await new Promise(r => {
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', r);
+    else r();
+  });
+  const ok = initFirebase(FIREBASE_CONFIG_BUILTIN);
+  if(ok){
+    startClassesListener();
+    classesCache = await fbGetClasses();
+    setSyncBadge('ok');
+  } else {
+    setSyncBadge('off');
+    snack('⚠️ Connexion Firebase échouée — mode local activé', 3500);
+  }
+  showScreen('accueil');
+  renderAccueil();
+}
+init();
+</script>
+</body>
+</html>
